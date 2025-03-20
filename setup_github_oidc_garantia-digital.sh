@@ -112,13 +112,7 @@ cat > pipeline-policy.json <<EOF
       "Sid": "LambdaManagement",
       "Effect": "Allow",
       "Action": [
-        "lambda:CreateFunction",
-        "lambda:UpdateFunctionCode",
-        "lambda:UpdateFunctionConfiguration",
-        "lambda:GetFunction",
-        "lambda:DeleteFunction",
-        "lambda:ListVersionsByFunction",
-        "lambda:InvokeFunction"
+        "lambda:*"
       ],
       "Resource": "*"
     },
