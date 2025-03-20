@@ -1,0 +1,42 @@
+﻿Pedido: {{Pedido}}
+Cliente: {{NomeCliente}}
+Telefone: {{Telefone}}
+Email: {{Email}}
+Data da Compra: {{DataCompra}}
+Prazo da Garantia: {{PrazoGarantia}}
+________________
+
+
+Antonella Gold - Semijoias, oferece garantia para substituição de peças exclusivamente em casos de defeito de fabricação, sem custos adicionais para o cliente. A garantia não cobre danos causados por mau uso, incluindo, mas não se limitando a: quebras, arranhões, perda de pedras, manchas resultantes do contato com produtos químicos ou cosméticos, desgaste natural, reações a medicamentos, opacidade de pedras por acúmulo de resíduos e peças amassadas.
+Para que a peça seja elegível para a garantia, ela deve ser encaminhada para análise acompanhada do certificado de garantia recebido no momento da compra.
+________________
+
+
+Cuidados e Dicas de Preservação das Semijoias
+Para garantir a durabilidade e a beleza das suas semijoias, siga as dicas de cuidados abaixo:
+1. Evite contato com Produtos Químicos: Perfumes, cremes, loções, e produtos de limpeza podem reagir com os metais e pedras, causando manchas ou corrosão. Aplique cosméticos antes de colocar as semijoias.
+2. Guarde Separadamente: Armazene suas semijoias em um local seco e arejado, preferencialmente em compartimentos individuais ou saquinhos de tecido, para evitar arranhões e danos por fricção.
+3. Retire Antes de Atividades Físicas: Retire suas semijoias antes de nadar, praticar exercícios ou outras atividades físicas que possam causar impacto ou exposição a suor e umidade.
+
+
+
+4. Limpeza Regular: Limpe suas semijoias regularmente com um pano macio e seco. Para uma limpeza mais profunda, você pode usar água morna e detergente neutro. Enxágue bem e seque completamente com um pano macio. Evite o uso de produtos químicos ou materiais abrasivos.
+5. Evite a Exposição Prolongada ao Sol: A exposição direta e prolongada ao sol pode desbotar as cores e afetar o brilho das pedras e metais.
+6. Evite o contato excessivo com água: sempre retire suas semijoias antes de tomar banho ou lavar as mãos para prevenir danos causados pela umidade.
+Seguindo essas orientações, suas semijoias permanecerão bonitas e conservadas por mais tempo.
+________________
+
+
+Contato para Assistência:
+E-mail: antonellagoldsemijoias@gmail.com
+Telefone/WhatsApp: (11) 98320-3185
+________________
+
+
+Observações Adicionais:
+* Este documento é válido como garantia digital. Guarde-o em um local seguro, pois será necessário para qualquer solicitação de assistência.
+* A garantia é válida apenas para o primeiro comprador e não é transferível.
+________________
+
+
+Confirmação Digital: Este termo de garantia é considerado aceito pelo cliente ao responder ao e-mail de entrega do documento com a confirmação de recebimento.

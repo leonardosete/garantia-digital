@@ -1,0 +1,52 @@
+name: Deploy AWS Lambda via Terraform
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configurar AWS via OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::114284751948:role/GitHubActionsTerraformRole
+          aws-region: us-east-1
+
+      - name: Instalar dependências (para empacotar no .zip)
+        run: |
+          pip install --upgrade pip
+          pip install reportlab requests
+          pip freeze > requirements.txt
+
+      - name: Gerar ZIP do Lambda (com dependências e arquivos)
+        run: |
+          mkdir temp_package
+          # Copia seu código
+          cp -r src/* temp_package/
+          # Cria pasta para dependências Python
+          mkdir temp_package/python
+          pip install -r requirements.txt --target temp_package/python
+          # Compacta tudo
+          cd temp_package
+          zip -r ../lambda_function_payload.zip .
+          cd ..
+
+      - name: Terraform Init/Apply
+        working-directory: infra
+        run: |
+          terraform init
+          terraform apply -auto-approve \
+            -var="lambda_version=${GITHUB_REF_NAME}" \
+            -var="email_smtp=${{ secrets.EMAIL_SMTP }}" \
+            -var="pass_smtp=${{ secrets.PASS_SMTP }}"
