@@ -116,7 +116,9 @@ cat > pipeline-policy.json <<EOF
         "lambda:UpdateFunctionCode",
         "lambda:UpdateFunctionConfiguration",
         "lambda:GetFunction",
-        "lambda:DeleteFunction"
+        "lambda:DeleteFunction",
+        "lambda:ListVersionsByFunction",
+        "lambda:InvokeFunction"
       ],
       "Resource": "*"
     },
