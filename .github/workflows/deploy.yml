@@ -33,40 +33,20 @@ jobs:
           pip install --upgrade pip
           pip install -r src/requirements.txt
 
-      - name: Instalar dependências Python
-        run: |
-          pip install --upgrade pip
-          pip install -r src/requirements.txt
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-
       - name: Gerar ZIP do Lambda
         run: |
           mkdir temp_package
-          cp src/*.py temp_package/
+          cp src/create-garantia.py temp_package/
           cp src/template-garantia.txt temp_package/
           cp src/logo-backgroud.png temp_package/
-
-          # Instalar dependências num subdiretório
           mkdir temp_package/python
           pip install -r src/requirements.txt --target temp_package/python
-
           cd temp_package
           zip -r ../lambda_function_payload.zip .
           cd ..
 
-      # - name: Gerar ZIP do Lambda
-      #   run: |
-      #     mkdir temp_package
-      #     cp src/*.py temp_package/
-      #     cp src/template-garantia.txt temp_package/
-      #     cp src/logo-backgroud.png temp_package/
-      #     mkdir temp_package/python
-      #     pip install -r src/requirements.txt --target temp_package/python
-      #     cd temp_package
-      #     zip -r ../lambda_function_payload.zip .
-      #     cd ..
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
 
       - name: Terraform Init e Apply
         working-directory: infra
