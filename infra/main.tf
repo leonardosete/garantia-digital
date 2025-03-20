@@ -33,7 +33,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 }
 
 resource "aws_lambda_function" "garantia_digital" {
-  function_name = "garantia-digital-${var.lambda_version}"
+  function_name = "garantia-digital-${replace(var.lambda_version, ".", "-")}"
   role          = aws_iam_role.lambda_role.arn
   runtime       = "python3.9"
   handler       = "create-garantia.lambda_handler"
