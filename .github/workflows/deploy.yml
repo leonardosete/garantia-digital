@@ -36,17 +36,13 @@ jobs:
       - name: Gerar ZIP do Lambda
         run: |
           mkdir temp_package
-          pip install -r src/requirements.txt --target temp_package
-          
-          # Copie seus .py e outros arquivos
+          pip install --platform manylinux2014_x86_64 --only-binary=:all: -r src/requirements.txt --target temp_package
           cp src/create-garantia.py temp_package/
           cp src/template-garantia.txt temp_package/
           cp src/logo-backgroud.png temp_package/
-          
           cd temp_package
           zip -r ../lambda_function_payload.zip .
           cd ..
-
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
