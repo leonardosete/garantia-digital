@@ -2,38 +2,34 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "AllowTerraformStateBucket",
+      "Sid": "TerraformStateListBucket",
       "Effect": "Allow",
-      "Action": [
-        "s3:ListBucket"
-      ],
-      "Resource": [
-        "arn:aws:s3:::garantia-digital-terraform-state"
-      ]
+      "Action": [ "s3:ListBucket" ],
+      "Resource": [ "arn:aws:s3:::garantia-digital-terraform-state" ]
     },
     {
-      "Sid": "AllowTerraformStateObjects",
+      "Sid": "TerraformStateObjects",
       "Effect": "Allow",
-      "Action": [
-        "s3:GetObject",
-        "s3:PutObject",
-        "s3:DeleteObject"
-      ],
-      "Resource": [
-        "arn:aws:s3:::garantia-digital-terraform-state/*"
-      ]
+      "Action": [ "s3:GetObject", "s3:PutObject", "s3:DeleteObject" ],
+      "Resource": [ "arn:aws:s3:::garantia-digital-terraform-state/*" ]
     },
     {
-      "Sid": "AllowLambdaManagement",
+      "Sid": "LambdaManagement",
       "Effect": "Allow",
       "Action": [
         "lambda:CreateFunction",
         "lambda:UpdateFunctionCode",
         "lambda:UpdateFunctionConfiguration",
-        "lambda:DeleteFunction",
-        "lambda:GetFunction"
+        "lambda:GetFunction",
+        "lambda:DeleteFunction"
       ],
       "Resource": "*"
+    },
+    {
+      "Sid": "PassRoleToLambda",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::114284751948:role/LambdaGarantiaDigitalRole"
     }
   ]
 }

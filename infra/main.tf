@@ -23,11 +23,4 @@ resource "aws_lambda_function" "garantia_digital" {
   filename = "../lambda_function_payload.zip"
 
   source_code_hash = filebase64sha256("../lambda_function_payload.zip")
-
-  environment {
-    variables = {
-      email_smtp = var.email_smtp
-      pass_smtp  = var.pass_smtp
-    }
-  }
 }
