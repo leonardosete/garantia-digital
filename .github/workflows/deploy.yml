@@ -23,21 +23,24 @@ jobs:
           role-to-assume: arn:aws:iam::114284751948:role/GitHubActionsTerraformRole
           aws-region: us-east-1
 
-      - name: Instalar dependências (para empacotar no .zip)
+      - name: Instalar dependências para empacotar no .zip
         run: |
           pip install --upgrade pip
-          pip install reportlab requests
-          pip freeze > requirements.txt
+          pip install -r src/requirements.txt
 
-      - name: Gerar ZIP do Lambda (com dependências e arquivos)
+      - name: Gerar ZIP do Lambda (código + deps + arquivos extras)
         run: |
           mkdir temp_package
-          # Copia seu código
-          cp -r src/* temp_package/
-          # Cria pasta para dependências Python
+          # Copia seus arquivos .py, template, imagem...
+          cp src/*.py temp_package/
+          cp src/template-garantia.txt temp_package/
+          cp src/logo-backgroud.png temp_package/
+
+          # Cria pasta para libs Python
           mkdir temp_package/python
-          pip install -r requirements.txt --target temp_package/python
-          # Compacta tudo
+          pip install -r src/requirements.txt --target temp_package/python
+
+          # Compacta
           cd temp_package
           zip -r ../lambda_function_payload.zip .
           cd ..
