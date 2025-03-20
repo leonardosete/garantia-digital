@@ -33,6 +33,9 @@ jobs:
           pip install --upgrade pip
           pip install -r src/requirements.txt
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
       - name: Gerar ZIP do Lambda
         run: |
           mkdir temp_package
