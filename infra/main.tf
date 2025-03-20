@@ -5,48 +5,43 @@ terraform {
       version = "~> 5.0"
     }
   }
-  # Se tiver o arquivo backend.tf para S3 remoto, não precisa repetir aqui
+  # Caso use o backend remoto (S3) num arquivo "backend.tf", não repita aqui
 }
 
 provider "aws" {
   region = "us-east-1"
 }
 
-resource "aws_iam_role" "lambda_role" {
-  name               = "garantia-digital-lambda-role"
-  assume_role_policy = data.aws_iam_policy_document.lambda_trust_policy.json
+variable "lambda_version" {
+  type        = string
+  description = "Versão para o nome do Lambda"
 }
 
-data "aws_iam_policy_document" "lambda_trust_policy" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["lambda.amazonaws.com"]
-    }
-  }
+variable "email_smtp" {
+  type      = string
+  sensitive = true
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
-  role       = aws_iam_role.lambda_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+variable "pass_smtp" {
+  type      = string
+  sensitive = true
 }
 
 resource "aws_lambda_function" "garantia_digital" {
   function_name = "garantia-digital-${replace(var.lambda_version, ".", "-")}"
-  role          = aws_iam_role.lambda_role.arn
+  # Use a role ARN criada no script bash
+  role          = "arn:aws:iam::114284751948:role/LambdaGarantiaDigitalRole"
+  
   runtime       = "python3.9"
   handler       = "create-garantia.lambda_handler"
-  filename      = "../lambda_function_payload.zip" # ZIP gerado pelo CI
+  filename      = "../lambda_function_payload.zip"
 
-  # Garante que o arquivo modificado gere um novo deploy
   source_code_hash = filebase64sha256("../lambda_function_payload.zip")
 
   environment {
     variables = {
       email_smtp = var.email_smtp
       pass_smtp  = var.pass_smtp
-      # Aqui vão outras env vars que você precisar
     }
   }
 }
