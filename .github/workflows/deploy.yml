@@ -1,9 +1,23 @@
 name: Deploy AWS Lambda via Terraform
 
 on:
+  # Acionamento automático em tags
   push:
     tags:
       - "v*.*.*"
+
+  # Execução manual
+  workflow_dispatch:
+    inputs:
+      tf_action:
+        description: "Escolha a ação do Terraform"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
 
 permissions:
   id-token: write
@@ -47,11 +61,33 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Terraform Init e Apply
+      - name: Terraform Plan
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tf_action == 'plan' }}
+        working-directory: infra
+        run: |
+          terraform init
+          terraform plan \
+            -var="lambda_version=manual-run" \
+            -var="email_smtp=${{ secrets.EMAIL_SMTP }}" \
+            -var="pass_smtp=${{ secrets.PASS_SMTP }}"
+
+      # Rodará se for push de tag (event == push), OU for manual e a pessoa escolheu tf_action=apply
+      - name: Terraform Apply
+        if: ${{ (github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && github.event.inputs.tf_action == 'apply') }}
         working-directory: infra
         run: |
           terraform init
           terraform apply -auto-approve \
-            -var="lambda_version=${GITHUB_REF_NAME}" \
+            -var="lambda_version=${{ github.ref_name }}" \
+            -var="email_smtp=${{ secrets.EMAIL_SMTP }}" \
+            -var="pass_smtp=${{ secrets.PASS_SMTP }}"
+
+      - name: Terraform Destroy
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tf_action == 'destroy' }}
+        working-directory: infra
+        run: |
+          terraform init
+          terraform destroy -auto-approve \
+            -var="lambda_version=manual-run" \
             -var="email_smtp=${{ secrets.EMAIL_SMTP }}" \
             -var="pass_smtp=${{ secrets.PASS_SMTP }}"
