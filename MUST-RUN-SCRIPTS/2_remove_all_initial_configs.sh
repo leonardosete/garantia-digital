@@ -6,13 +6,23 @@ set -euo pipefail
 ##############################################################################
 AWS_ACCOUNT_ID="114284751948"
 
+# Nomes das roles / policies
 PIPELINE_ROLE_NAME="GitHubActionsTerraformRole"
 PIPELINE_POLICY_NAME="PipelineTerraformPolicy"
 LAMBDA_ROLE_NAME="LambdaGarantiaDigitalRole"
+
+# Nome da Function criada via Terraform (exemplo). 
+# Ajuste para corresponder ao que está no seu main.tf
+# Se estiver usando "function_name = garantia-digital-${replace(var.lambda_version, '.', '-')}",
+# talvez precise de um sufixo de versão, ou repasse via parâmetro ao script.
+LAMBDA_FUNCTION_NAME="garantia-digital-v1-0-0"  # Ajuste aqui
+
+# Bucket S3 do tfstate
 S3_BUCKET="garantia-digital-terraform-state"
 
 # Opcional: remover também o OIDC provider
 OIDC_PROVIDER_URL="token.actions.githubusercontent.com"
+
 
 echo "========================================================="
 echo "SCRIPT DE TEARDOWN - REMOVENDO RECURSOS"
@@ -20,23 +30,24 @@ echo "Bucket S3            : $S3_BUCKET"
 echo "Pipeline Role        : $PIPELINE_ROLE_NAME"
 echo "Policy Pipeline      : $PIPELINE_POLICY_NAME"
 echo "Lambda Role          : $LAMBDA_ROLE_NAME"
+echo "Lambda Function      : $LAMBDA_FUNCTION_NAME"
 echo "OIDC Provider (opt.) : $OIDC_PROVIDER_URL"
 echo "========================================================="
+
 
 ##############################################################################
 # 1) REMOVER / ESVAZIAR O BUCKET S3
 ##############################################################################
-echo "[1/6] Esvaziando e removendo o bucket S3 ($S3_BUCKET)..."
+echo "[1/7] Esvaziando e removendo o bucket S3 ($S3_BUCKET)..."
 
-# Passo A: Remover objetos "correntes" (sem versionamento ou a versão atual)
+# A) Remove objetos sem versionamento
 aws s3 rm "s3://$S3_BUCKET" --recursive || \
-  echo "Falha ao remover objetos ou bucket já vazio."
+  echo "Falha ao remover objetos ou bucket vazio."
 
-# Passo B: Remover versões e delete markers (caso o bucket tenha versionamento)
+# B) Remover versões e delete markers (se tiver versionamento habilitado)
 echo "Removendo todas as versões do bucket (se estiver versionado)..."
 VERSIONS_JSON=$(aws s3api list-object-versions --bucket "$S3_BUCKET" --output json 2>/dev/null || true)
 if [ -n "$VERSIONS_JSON" ]; then
-  # Concatena as listas de Versions e DeleteMarkers
   VERSIONS=$(echo "$VERSIONS_JSON" | jq -r '.Versions[]?, .DeleteMarkers[]? | [.Key, .VersionId] | @tsv' || true)
   if [ -n "$VERSIONS" ]; then
     while IFS=$'\t' read -r key version_id; do
@@ -46,15 +57,29 @@ if [ -n "$VERSIONS_JSON" ]; then
   fi
 fi
 
-# Passo C: Excluir o bucket
+# C) Excluir o bucket
 echo "Tentando apagar o bucket $S3_BUCKET..."
 aws s3api delete-bucket --bucket "$S3_BUCKET" || \
-  echo "Falha ao deletar bucket $S3_BUCKET (talvez não exista ou ainda haja objetos)."
+  echo "Falha ao deletar bucket $S3_BUCKET (talvez não exista ou haja objetos)."
+
 
 ##############################################################################
-# 2) REMOVER A POLICY DO PIPELINE
+# 2) REMOVER A FUNÇÃO LAMBDA
 ##############################################################################
-echo "[2/6] Removendo a policy $PIPELINE_POLICY_NAME e desvinculando da role $PIPELINE_ROLE_NAME..."
+echo "[2/7] Removendo a Lambda Function ($LAMBDA_FUNCTION_NAME)..."
+set +e
+aws lambda delete-function --function-name "$LAMBDA_FUNCTION_NAME"
+LAMBDA_DEL_EXIT=$?
+set -e
+if [ "$LAMBDA_DEL_EXIT" -ne 0 ]; then
+  echo "Falha ao deletar a Lambda Function $LAMBDA_FUNCTION_NAME. Talvez não exista."
+fi
+
+
+##############################################################################
+# 3) REMOVER A POLICY DO PIPELINE
+##############################################################################
+echo "[3/7] Removendo a policy $PIPELINE_POLICY_NAME e desvinculando da role $PIPELINE_ROLE_NAME..."
 
 PIPELINE_POLICY_ARN=$(aws iam list-policies \
   --query "Policies[?PolicyName=='$PIPELINE_POLICY_NAME'].Arn" \
@@ -86,10 +111,11 @@ else
   echo "Policy $PIPELINE_POLICY_NAME não encontrada. Prosseguindo."
 fi
 
+
 ##############################################################################
-# 3) REMOVER A ROLE DO PIPELINE
+# 4) REMOVER A ROLE DO PIPELINE
 ##############################################################################
-echo "[3/6] Removendo a role do pipeline $PIPELINE_ROLE_NAME..."
+echo "[4/7] Removendo a role do pipeline $PIPELINE_ROLE_NAME..."
 set +e
 aws iam delete-role --role-name "$PIPELINE_ROLE_NAME"
 ROLE_DEL_EXIT=$?
@@ -98,11 +124,12 @@ if [ "$ROLE_DEL_EXIT" -ne 0 ]; then
   echo "Falha ao deletar a role do pipeline. Talvez não exista, ou haja policies pendentes."
 fi
 
+
 ##############################################################################
-# 4) REMOVER A ROLE DO LAMBDA
+# 5) REMOVER A ROLE DO LAMBDA
 ##############################################################################
-echo "[4/6] Removendo a role do Lambda $LAMBDA_ROLE_NAME..."
-# Passo A: listar e detach de todas as policies
+echo "[5/7] Removendo a role do Lambda $LAMBDA_ROLE_NAME..."
+# A) listar e detach de todas as policies
 LAM_ROLE_ATTACHED_POLICIES=$(aws iam list-attached-role-policies \
   --role-name "$LAMBDA_ROLE_NAME" \
   --query "AttachedPolicies[].PolicyArn" \
@@ -123,10 +150,11 @@ if [ "$LAMBDA_ROLE_DEL_EXIT" -ne 0 ]; then
   echo "Falha ao deletar a role do Lambda. Talvez não exista ou ainda haja anexos pendentes."
 fi
 
+
 ##############################################################################
-# 5) (OPCIONAL) REMOVER O OIDC PROVIDER
+# 6) (OPCIONAL) REMOVER O OIDC PROVIDER
 ##############################################################################
-echo "[5/6] (Opcional) Removendo OIDC provider se quiser..."
+echo "[6/7] (Opcional) Removendo OIDC provider se quiser..."
 OIDC_ARN="arn:aws:iam::$AWS_ACCOUNT_ID:oidc-provider/$OIDC_PROVIDER_URL"
 echo "Tentando remover OIDC Provider $OIDC_ARN..."
 
@@ -134,15 +162,15 @@ set +e
 aws iam delete-open-id-connect-provider --open-id-connect-provider-arn "$OIDC_ARN"
 OIDC_DEL_EXIT=$?
 set -e
-
 if [ "$OIDC_DEL_EXIT" -ne 0 ]; then
   echo "Falha ao remover OIDC $OIDC_ARN. Talvez esteja em uso ou não exista."
 fi
 
+
 ##############################################################################
-# 6) FIM
+# 7) FIM
 ##############################################################################
-echo "[6/6] TEARDOWN FINALIZADO!"
+echo "[7/7] TEARDOWN FINALIZADO!"
 echo "========================================================="
-echo "Recursos removidos (bucket, roles, policies)."
+echo "Recursos removidos (bucket, Lambda function, roles, policies)."
 echo "========================================================="
