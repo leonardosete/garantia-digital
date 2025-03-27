@@ -11,18 +11,11 @@ PIPELINE_ROLE_NAME="GitHubActionsTerraformRole"
 PIPELINE_POLICY_NAME="PipelineTerraformPolicy"
 LAMBDA_ROLE_NAME="LambdaGarantiaDigitalRole"
 
-# Nome da Function criada via Terraform (exemplo). 
-# Ajuste para corresponder ao que está no seu main.tf
-# Se estiver usando "function_name = garantia-digital-${replace(var.lambda_version, '.', '-')}",
-# talvez precise de um sufixo de versão, ou repasse via parâmetro ao script.
-LAMBDA_FUNCTION_NAME="garantia-digital-v1-0-0"  # Ajuste aqui
-
 # Bucket S3 do tfstate
 S3_BUCKET="garantia-digital-terraform-state"
 
 # Opcional: remover também o OIDC provider
 OIDC_PROVIDER_URL="token.actions.githubusercontent.com"
-
 
 echo "========================================================="
 echo "SCRIPT DE TEARDOWN - REMOVENDO RECURSOS"
@@ -30,7 +23,7 @@ echo "Bucket S3            : $S3_BUCKET"
 echo "Pipeline Role        : $PIPELINE_ROLE_NAME"
 echo "Policy Pipeline      : $PIPELINE_POLICY_NAME"
 echo "Lambda Role          : $LAMBDA_ROLE_NAME"
-echo "Lambda Function      : $LAMBDA_FUNCTION_NAME"
+echo "Remover Lambdas que contenham: garantia-digital"
 echo "OIDC Provider (opt.) : $OIDC_PROVIDER_URL"
 echo "========================================================="
 
@@ -40,11 +33,11 @@ echo "========================================================="
 ##############################################################################
 echo "[1/7] Esvaziando e removendo o bucket S3 ($S3_BUCKET)..."
 
-# A) Remove objetos sem versionamento
+# A) Remove objetos (sem versionamento)
 aws s3 rm "s3://$S3_BUCKET" --recursive || \
   echo "Falha ao remover objetos ou bucket vazio."
 
-# B) Remover versões e delete markers (se tiver versionamento habilitado)
+# B) Remover versões e delete markers (caso o bucket tenha versionamento habilitado)
 echo "Removendo todas as versões do bucket (se estiver versionado)..."
 VERSIONS_JSON=$(aws s3api list-object-versions --bucket "$S3_BUCKET" --output json 2>/dev/null || true)
 if [ -n "$VERSIONS_JSON" ]; then
@@ -64,15 +57,29 @@ aws s3api delete-bucket --bucket "$S3_BUCKET" || \
 
 
 ##############################################################################
-# 2) REMOVER A FUNÇÃO LAMBDA
+# 2) REMOVER TODAS AS FUNÇÕES LAMBDA QUE TENHAM "garantia-digital" NO NOME
 ##############################################################################
-echo "[2/7] Removendo a Lambda Function ($LAMBDA_FUNCTION_NAME)..."
-set +e
-aws lambda delete-function --function-name "$LAMBDA_FUNCTION_NAME"
-LAMBDA_DEL_EXIT=$?
-set -e
-if [ "$LAMBDA_DEL_EXIT" -ne 0 ]; then
-  echo "Falha ao deletar a Lambda Function $LAMBDA_FUNCTION_NAME. Talvez não exista."
+echo "[2/7] Buscando e removendo Lambdas que contenham 'garantia-digital'..."
+
+FUNCTIONS=$(aws lambda list-functions --query "Functions[].FunctionName" --output text || true)
+if [ -n "$FUNCTIONS" ]; then
+  for fn in $FUNCTIONS; do
+    # Ajuste a lógica abaixo se quiser "contém" ou "começa com"
+    # Aqui usamos '*garantia-digital*' => "contém"
+    # Se quiser que seja prefixo: [[ $fn == garantia-digital* ]]
+    if [[ "$fn" == *garantia-digital* ]]; then
+      echo "Excluindo Lambda: $fn"
+      set +e
+      aws lambda delete-function --function-name "$fn"
+      LAMBDA_DEL_EXIT=$?
+      set -e
+      if [ "$LAMBDA_DEL_EXIT" -ne 0 ]; then
+        echo "Falha ao deletar a Lambda Function $fn. Talvez não exista."
+      fi
+    fi
+  done
+else
+  echo "Nenhuma função Lambda encontrada."
 fi
 
 
@@ -172,5 +179,5 @@ fi
 ##############################################################################
 echo "[7/7] TEARDOWN FINALIZADO!"
 echo "========================================================="
-echo "Recursos removidos (bucket, Lambda function, roles, policies)."
+echo "Recursos removidos (bucket, Lambdas, roles, policies)."
 echo "========================================================="
