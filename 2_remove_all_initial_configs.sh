@@ -6,13 +6,12 @@ set -euo pipefail
 ##############################################################################
 AWS_ACCOUNT_ID="114284751948"
 
-# Recursos criados pelo setup
 PIPELINE_ROLE_NAME="GitHubActionsTerraformRole"
 PIPELINE_POLICY_NAME="PipelineTerraformPolicy"
 LAMBDA_ROLE_NAME="LambdaGarantiaDigitalRole"
 S3_BUCKET="garantia-digital-terraform-state"
 
-# Opcional: remover também o OIDC provider do GitHub
+# Opcional: remover também o OIDC provider
 OIDC_PROVIDER_URL="token.actions.githubusercontent.com"
 
 echo "========================================================="
@@ -28,34 +27,46 @@ echo "========================================================="
 # 1) REMOVER / ESVAZIAR O BUCKET S3
 ##############################################################################
 echo "[1/6] Esvaziando e removendo o bucket S3 ($S3_BUCKET)..."
-# Passo A: Esvaziar (remove todos os objetos do bucket)
+
+# Passo A: Remover objetos "correntes" (sem versionamento ou a versão atual)
 aws s3 rm "s3://$S3_BUCKET" --recursive || \
   echo "Falha ao remover objetos ou bucket já vazio."
 
-# Passo B: Excluir o bucket
+# Passo B: Remover versões e delete markers (caso o bucket tenha versionamento)
+echo "Removendo todas as versões do bucket (se estiver versionado)..."
+VERSIONS_JSON=$(aws s3api list-object-versions --bucket "$S3_BUCKET" --output json 2>/dev/null || true)
+if [ -n "$VERSIONS_JSON" ]; then
+  # Concatena as listas de Versions e DeleteMarkers
+  VERSIONS=$(echo "$VERSIONS_JSON" | jq -r '.Versions[]?, .DeleteMarkers[]? | [.Key, .VersionId] | @tsv' || true)
+  if [ -n "$VERSIONS" ]; then
+    while IFS=$'\t' read -r key version_id; do
+      echo "Excluindo versão do objeto: Key=$key, VersionId=$version_id"
+      aws s3api delete-object --bucket "$S3_BUCKET" --key "$key" --version-id "$version_id" || true
+    done <<< "$VERSIONS"
+  fi
+fi
+
+# Passo C: Excluir o bucket
+echo "Tentando apagar o bucket $S3_BUCKET..."
 aws s3api delete-bucket --bucket "$S3_BUCKET" || \
-  echo "Falha ao deletar bucket $S3_BUCKET (talvez não exista)."
+  echo "Falha ao deletar bucket $S3_BUCKET (talvez não exista ou ainda haja objetos)."
 
 ##############################################################################
 # 2) REMOVER A POLICY DO PIPELINE
 ##############################################################################
 echo "[2/6] Removendo a policy $PIPELINE_POLICY_NAME e desvinculando da role $PIPELINE_ROLE_NAME..."
 
-# Achar ARN da policy
 PIPELINE_POLICY_ARN=$(aws iam list-policies \
   --query "Policies[?PolicyName=='$PIPELINE_POLICY_NAME'].Arn" \
   --output text || true)
 
 if [[ "$PIPELINE_POLICY_ARN" != "None" && -n "$PIPELINE_POLICY_ARN" ]]; then
-
-  # Detach da role do Pipeline
   echo "Desvinculando $PIPELINE_POLICY_ARN da role $PIPELINE_ROLE_NAME (se estiver anexada)."
   aws iam detach-role-policy \
     --role-name "$PIPELINE_ROLE_NAME" \
     --policy-arn "$PIPELINE_POLICY_ARN" || true
 
-  # Listar versões e apagar as antigas
-  echo "Apagando versões antigas da policy (se houver) ..."
+  echo "Apagando versões antigas da policy (se houver)..."
   VERSIONS_TO_DELETE=$(aws iam list-policy-versions \
     --policy-arn "$PIPELINE_POLICY_ARN" \
     --query "Versions[?IsDefaultVersion==\`false\`].VersionId" \
@@ -68,11 +79,9 @@ if [[ "$PIPELINE_POLICY_ARN" != "None" && -n "$PIPELINE_POLICY_ARN" ]]; then
     echo "Deletou versão antiga: $ver"
   done
 
-  # Finalmente apagar a policy
   echo "Removendo a policy $PIPELINE_POLICY_NAME."
   aws iam delete-policy --policy-arn "$PIPELINE_POLICY_ARN" || \
     echo "Falha ao deletar a policy (talvez já removida)."
-
 else
   echo "Policy $PIPELINE_POLICY_NAME não encontrada. Prosseguindo."
 fi
@@ -81,12 +90,10 @@ fi
 # 3) REMOVER A ROLE DO PIPELINE
 ##############################################################################
 echo "[3/6] Removendo a role do pipeline $PIPELINE_ROLE_NAME..."
-
 set +e
 aws iam delete-role --role-name "$PIPELINE_ROLE_NAME"
 ROLE_DEL_EXIT=$?
 set -e
-
 if [ "$ROLE_DEL_EXIT" -ne 0 ]; then
   echo "Falha ao deletar a role do pipeline. Talvez não exista, ou haja policies pendentes."
 fi
@@ -95,8 +102,7 @@ fi
 # 4) REMOVER A ROLE DO LAMBDA
 ##############################################################################
 echo "[4/6] Removendo a role do Lambda $LAMBDA_ROLE_NAME..."
-
-# Passo A: listar e detach de todas as policies anexadas
+# Passo A: listar e detach de todas as policies
 LAM_ROLE_ATTACHED_POLICIES=$(aws iam list-attached-role-policies \
   --role-name "$LAMBDA_ROLE_NAME" \
   --query "AttachedPolicies[].PolicyArn" \
@@ -105,7 +111,7 @@ LAM_ROLE_ATTACHED_POLICIES=$(aws iam list-attached-role-policies \
 if [ -n "$LAM_ROLE_ATTACHED_POLICIES" ] && [ "$LAM_ROLE_ATTACHED_POLICIES" != "None" ]; then
   for policy_arn in $LAM_ROLE_ATTACHED_POLICIES; do
     echo "Desvinculando $policy_arn da role $LAMBDA_ROLE_NAME"
-    aws iam detach-role-policy --role-name "$LAMBDA_ROLE_NAME" --policy-arn "$policy_arn"
+    aws iam detach-role-policy --role-name "$LAMBDA_ROLE_NAME" --policy-arn "$policy_arn" || true
   done
 fi
 
