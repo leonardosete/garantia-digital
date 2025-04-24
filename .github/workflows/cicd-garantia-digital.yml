@@ -1,32 +1,30 @@
-name: CI/CD – Build & Deploy garantia-digital
+name: CI/CD - Build e Deploy Garantia Digital
 
 on:
   push:
     branches: [mvp]
     paths:
       - 'src/**'
-      - 'Dockerfile'
-      - 'requirements.txt'
+      - 'infra/**'
       - '.github/workflows/**'
   workflow_dispatch:
 
 jobs:
   check-changes:
-    name: 🔍 Verifica mudanças no código
+    name: 🔍 Verifica se build é necessário
     runs-on: ubuntu-latest
     outputs:
-      should_build: ${{ steps.diff.outputs.changed }}
+      should_build: ${{ steps.check.outputs.changed }}
     steps:
-      - name: 📦 Checkout
+      - name: 📦 Checkout do código
         uses: actions/checkout@v4
-      - name: 🧠 Detecta se linguagem ou Dockerfile mudou
-        id: diff
+
+      - name: 🧠 Verifica se Dockerfile ou src/ foram alterados
+        id: check
         run: |
           echo "changed=false" >> $GITHUB_OUTPUT
           git fetch origin mvp
-          # se houver alterações em src/, Dockerfile ou requirements.txt
-          if git diff --name-only origin/mvp HEAD \
-               | grep -E '^(src/|Dockerfile|requirements.txt)'; then
+          if git diff --name-only origin/mvp HEAD | grep -E '^src/Dockerfile|^src/'; then
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
@@ -37,24 +35,28 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ steps.meta.outputs.version }}
+
     steps:
-      - name: 📦 Checkout
+      - name: 📦 Checkout do código
         uses: actions/checkout@v4
-      - name: 🏷️ Define tags da imagem
+
+      - name: 🏷️ Metadados da imagem
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: docker.io/sevenleo/garantia-digital
+          images: docker.io/sevenleo/github-dashboard
           tags: |
             type=sha,format=short
             type=ref,event=branch
             type=raw,value=latest
+
       - name: 🔐 Login no Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: 🔨 Build & Push
+
+      - name: 🛠️ Build e Push da Imagem
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -64,42 +66,39 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   update-values-and-deploy:
-    name: 🚀 Update Helm chart & deploy via ArgoCD
+    name: 🚀 Atualiza values.yaml e Deploy ArgoCD
     needs: [check-changes, build-and-push]
     runs-on: ubuntu-latest
-    if: always()
+    if: always()  # sempre roda, mesmo se o build foi pulado
+
     steps:
-      - name: 📥 Checkout para atualização
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_PUSH_TOKEN }}
-          ref: mvp
-          fetch-depth: 0
-
-      - name: ✏️ Atualiza image.tag no Helm chart
+      - name: 🔁 Clona repositório autenticado com PAT
+        env:
+          GH_PUSH_TOKEN: ${{ secrets.GH_PUSH_TOKEN }}
         run: |
-          TAG="${{ needs.build-and-push.outputs.image_tag }}"
-          if [ -z "$TAG" ]; then TAG="latest"; fi
-          sed -i "s/^\(\s*tag:\s*\).*/\1\"$TAG\"/" infra/helm-charts/garantia-digital/values.yaml
-
-      - name: 💾 Commit & Push das alterações
-        run: |
+          git clone --branch mvp https://x-access-token:${GH_PUSH_TOKEN}@github.com/${{ github.repository }} repo-auth
+          cd repo-auth
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
+          IMAGE_TAG="${{ needs.build-and-push.outputs.image_tag }}"
+          if [ -z "$IMAGE_TAG" ]; then IMAGE_TAG="latest"; fi
+          sed -i "s/tag: .*/tag: $IMAGE_TAG/" infra/helm-charts/garantia-digital/values.yaml
           git add infra/helm-charts/garantia-digital/values.yaml
-          git commit -m "ci: bump garantia-digital image to $TAG" || echo "No changes to commit"
+          git commit -m "🚀 Atualiza imagem do garantia-digital para tag $IMAGE_TAG" || echo "Nada para commitar"
+          git pull --rebase origin mvp
           git push origin HEAD:mvp
 
-      - name: 🔐 Configura kubeconfig
+      - name: 🔐 kubeconfig
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_CONTENT }}" > ~/.kube/config
 
-      - name: 📄 Aplica Application ArgoCD
-        run: |
-          kubectl apply -f infra/argo-apps/garantia-digital.yaml -n argocd
+      - name: 🧩 Aplica o Application do ArgoCD
+        working-directory: repo-auth
+        run: kubectl apply -f infra/argo-apps/garantia-digital.yaml -n argocd
 
-      - name: 🔄 Força sync do ArgoCD
+      - name: 🔁 Força sync no ArgoCD
+        working-directory: repo-auth
         run: |
           kubectl -n argocd patch application garantia-digital \
             --type merge -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}'
