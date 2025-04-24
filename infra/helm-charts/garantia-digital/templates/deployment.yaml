@@ -4,8 +4,7 @@ metadata:
   name: {{ .Values.garantiaDigital.name }}
   namespace: {{ .Values.garantiaDigital.namespace }}
   labels:
-    app.kubernetes.io/name: {{ .Values.garantiaDigital.name }}
-    app.kubernetes.io/version: {{ .Chart.appVersion }}
+    app: {{ .Values.garantiaDigital.name }}
 spec:
   replicas: {{ .Values.garantiaDigital.replicaCount }}
   selector:
