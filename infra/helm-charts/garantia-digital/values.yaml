@@ -24,14 +24,14 @@ garantiaDigital:
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
       cert-manager.io/cluster-issuer: "letsencrypt"
     hosts:
-      - host: garantia-service.devops-master.shop
+      - host: {{ garantiaDigital.domainName }}
         paths:
           - path: /
             pathType: Prefix
     tls:
       - secretName: garantia-service-tls
         hosts:
-          - {{ .garantiaDigital.domainName }}
+          - {{ garantiaDigital.domainName }}
 
   env:
     # se no futuro precisar de variáveis de ambiente, ex:
