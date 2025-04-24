@@ -7,7 +7,7 @@ garantiaDigital:
   replicaCount: 1
   image:
     repository: sevenleo/garantia-digital
-    tag: latest
+    tag: mvp
     pullPolicy: IfNotPresent
   service:
     port: 7000
