@@ -24,7 +24,7 @@ garantiaDigital:
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
       cert-manager.io/cluster-issuer: "letsencrypt"
     hosts:
-      - host: {{ .garantiaDigital.domainName }}
+      - host: garantia-service.devops-master.shop
         paths:
           - path: /
             pathType: Prefix
