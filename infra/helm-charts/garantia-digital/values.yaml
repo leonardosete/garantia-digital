@@ -9,7 +9,7 @@ garantiaDigital:
 
   image:
     repository: sevenleo/garantia-digital
-    tag: "0.1.0"
+    tag: mvp
     pullPolicy: IfNotPresent
 
   service:
