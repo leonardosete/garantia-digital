@@ -21,9 +21,4 @@ spec:
           imagePullPolicy: {{ .Values.garantiaDigital.image.pullPolicy }}
           ports:
             -  containerPort: {{ .Values.garantiaDigital.service.targetPort }}
-          env:
-            {{- range .Values.garantiaDigital.env }}
-            - name: {{ .name }}
-              value: {{ .value | quote }}
-            {{- end }}
-      # se precisar montar Secrets, adicione volumes e volumeMounts aqui
+

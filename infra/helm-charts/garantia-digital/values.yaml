@@ -22,10 +22,4 @@ garantiaDigital:
     tls:
       enabled: true
       secretName: garantia-digital-tls
-  env:
-    # se no futuro precisar de variáveis de ambiente, ex:
-    # - name: SHEETS_CSV_URL
-    #   value: "https://docs.google.com/..."
-  secrets:
-    # se tiver secrets, coloque o nome do Secret para montar aqui
-    # ex: secretName: garantia-digital-secrets
+
