@@ -3,36 +3,25 @@
 garantiaDigital:
   name: garantia-digital
   namespace: garantia-digital
-  domainName: garantia-service.devops-master.shop
-
+  domain_name: garantia-service.devops-master.shop
   replicaCount: 1
-
   image:
     repository: sevenleo/garantia-digital
-    tag: mvp
+    tag: latest
     pullPolicy: IfNotPresent
-
   service:
     port: 7000
     targetPort: 7000
-
   ingress:
     enabled: true
     className: nginx
     annotations:
       nginx.ingress.kubernetes.io/rewrite-target: "/"
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-      cert-manager.io/cluster-issuer: "letsencrypt"
-    hosts:
-      - host: {{ garantiaDigital.domainName }}
-        paths:
-          - path: /
-            pathType: Prefix
+      cert-manager.io/cluster-issuer: "letsencrypt-staging"
     tls:
-      - secretName: garantia-service-tls
-        hosts:
-          - {{ garantiaDigital.domainName }}
-
+      enabled: true
+      secretName: garantia-digital-tls
   env:
     # se no futuro precisar de variáveis de ambiente, ex:
     # - name: SHEETS_CSV_URL

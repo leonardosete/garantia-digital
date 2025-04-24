@@ -21,8 +21,7 @@ spec:
           image: "{{ .Values.garantiaDigital.image.repository }}:{{ .Values.garantiaDigital.image.tag }}"
           imagePullPolicy: {{ .Values.garantiaDigital.image.pullPolicy }}
           ports:
-            - name: http
-              containerPort: {{ .Values.garantiaDigital.service.targetPort }}
+            -  containerPort: {{ .Values.garantiaDigital.service.targetPort }}
           env:
             {{- range .Values.garantiaDigital.env }}
             - name: {{ .name }}

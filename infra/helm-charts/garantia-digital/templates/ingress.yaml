@@ -11,20 +11,20 @@ metadata:
 spec:
   ingressClassName: {{ .Values.garantiaDigital.ingress.className }}
   rules:
-    - host: {{ .Values.garantiaDigital.domainName }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ .Values.garantiaDigital.name }}
-                port:
-                  number: {{ .Values.garantiaDigital.service.port }}
+  - host: {{ .Values.garantiaDigital.domain_name }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.garantiaDigital.name }}
+            port:
+              number: {{ .Values.garantiaDigital.service.port }}
   {{- if .Values.garantiaDigital.ingress.tls.enabled }}
   tls:
-    - hosts:
-        - {{ .Values.garantiaDigital.domainName }}
-      secretName: {{ .Values.garantiaDigital.ingress.tls.secretName }}
+  - hosts:
+    - {{ .Values.garantiaDigital.domain_name }}
+    secretName: {{ .Values.garantiaDigital.ingress.tls.secretName }}
   {{- end }}
 {{- end }}
