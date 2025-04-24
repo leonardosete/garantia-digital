@@ -1,0 +1,105 @@
+name: CI/CD – Build & Deploy garantia-digital
+
+on:
+  push:
+    branches: [mvp]
+    paths:
+      - 'src/**'
+      - 'Dockerfile'
+      - 'requirements.txt'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+jobs:
+  check-changes:
+    name: 🔍 Verifica mudanças no código
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.diff.outputs.changed }}
+    steps:
+      - name: 📦 Checkout
+        uses: actions/checkout@v4
+      - name: 🧠 Detecta se linguagem ou Dockerfile mudou
+        id: diff
+        run: |
+          echo "changed=false" >> $GITHUB_OUTPUT
+          git fetch origin mvp
+          # se houver alterações em src/, Dockerfile ou requirements.txt
+          if git diff --name-only origin/mvp HEAD \
+               | grep -E '^(src/|Dockerfile|requirements.txt)'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+  build-and-push:
+    name: 🛠️ Build & Push Docker Image
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: 📦 Checkout
+        uses: actions/checkout@v4
+      - name: 🏷️ Define tags da imagem
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: docker.io/sevenleo/garantia-digital
+          tags: |
+            type=sha,format=short
+            type=ref,event=branch
+            type=raw,value=latest
+      - name: 🔐 Login no Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: 🔨 Build & Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  update-values-and-deploy:
+    name: 🚀 Update Helm chart & deploy via ArgoCD
+    needs: [check-changes, build-and-push]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: 📥 Checkout para atualização
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PUSH_TOKEN }}
+          ref: mvp
+          fetch-depth: 0
+
+      - name: ✏️ Atualiza image.tag no Helm chart
+        run: |
+          TAG="${{ needs.build-and-push.outputs.image_tag }}"
+          if [ -z "$TAG" ]; then TAG="latest"; fi
+          sed -i "s/^\(\s*tag:\s*\).*/\1\"$TAG\"/" infra/helm-charts/garantia-digital/values.yaml
+
+      - name: 💾 Commit & Push das alterações
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add infra/helm-charts/garantia-digital/values.yaml
+          git commit -m "ci: bump garantia-digital image to $TAG" || echo "No changes to commit"
+          git push origin HEAD:mvp
+
+      - name: 🔐 Configura kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_CONTENT }}" > ~/.kube/config
+
+      - name: 📄 Aplica Application ArgoCD
+        run: |
+          kubectl apply -f infra/argo-apps/garantia-digital.yaml -n argocd
+
+      - name: 🔄 Força sync do ArgoCD
+        run: |
+          kubectl -n argocd patch application garantia-digital \
+            --type merge -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}'

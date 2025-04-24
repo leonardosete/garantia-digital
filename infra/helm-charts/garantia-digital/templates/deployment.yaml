@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.garantiaDigital.name }}
+  namespace: {{ .Values.garantiaDigital.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.garantiaDigital.name }}
+    app.kubernetes.io/version: {{ .Chart.appVersion }}
+spec:
+  replicas: {{ .Values.garantiaDigital.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.garantiaDigital.name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Values.garantiaDigital.name }}
+    spec:
+      containers:
+        - name: garantia
+          image: "{{ .Values.garantiaDigital.image.repository }}:{{ .Values.garantiaDigital.image.tag }}"
+          imagePullPolicy: {{ .Values.garantiaDigital.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.garantiaDigital.service.targetPort }}
+          env:
+            {{- range .Values.garantiaDigital.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+      # se precisar montar Secrets, adicione volumes e volumeMounts aqui

@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: garantia-digital
+  namespace: argocd
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: sevenleo/garantia-digital
+    argocd-image-updater.argoproj.io/sevenleo.garantia-digital.update-strategy: latest
+    argocd-image-updater.argoproj.io/sevenleo.garantia-digital.helm.values: image.tag
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/leonardosete/garantia-digital.git
+    targetRevision: mvp
+    path: infra/helm-charts/garantia-digital
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: garantia-digital
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: ""
+      kind: Namespace
+      name: garantia-digital
+      jsonPointers:
+        - /metadata/labels

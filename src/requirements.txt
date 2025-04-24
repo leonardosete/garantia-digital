@@ -1,2 +1,5 @@
-requests
+fastapi
+uvicorn[standard]
 reportlab
+requests
+python-multipart    # se precisar uploads no futuro

@@ -1,0 +1,30 @@
+{{- if .Values.garantiaDigital.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.garantiaDigital.name }}
+  namespace: {{ .Values.garantiaDigital.namespace }}
+  annotations:
+    {{- range $key, $value := .Values.garantiaDigital.ingress.annotations }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.garantiaDigital.ingress.className }}
+  rules:
+    - host: {{ .Values.garantiaDigital.domainName }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.garantiaDigital.name }}
+                port:
+                  number: {{ .Values.garantiaDigital.service.port }}
+  {{- if .Values.garantiaDigital.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.garantiaDigital.domainName }}
+      secretName: {{ .Values.garantiaDigital.ingress.tls.secretName }}
+  {{- end }}
+{{- end }}

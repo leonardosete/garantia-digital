@@ -1,0 +1,42 @@
+# valores parametrizáveis para garantia-digital
+
+garantiaDigital:
+  name: garantia-digital
+  namespace: garantia-digital
+  domainName: garantia-service.devops-master.shop
+
+  replicaCount: 1
+
+  image:
+    repository: sevenleo/garantia-digital
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+
+  service:
+    port: 8000
+    targetPort: 8000
+
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/rewrite-target: "/"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      cert-manager.io/cluster-issuer: "letsencrypt"
+    hosts:
+      - host: {{ .garantiaDigital.domainName }}
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: garantia-service-tls
+        hosts:
+          - {{ .garantiaDigital.domainName }}
+
+  env:
+    # se no futuro precisar de variáveis de ambiente, ex:
+    # - name: SHEETS_CSV_URL
+    #   value: "https://docs.google.com/..."
+  secrets:
+    # se tiver secrets, coloque o nome do Secret para montar aqui
+    # ex: secretName: garantia-digital-secrets

@@ -4,6 +4,7 @@ Telefone: {{Telefone}}
 Email: {{Email}}
 Data da Compra: {{DataCompra}}
 Prazo da Garantia: {{PrazoGarantia}}
+Valor da Compra: {{ValorVenda}}
 ________________
 
 
