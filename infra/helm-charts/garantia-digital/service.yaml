@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Values.garantiaDigital.namespace }}
 spec:
   selector:
-    app: {{ .Values.garantiaDigital.name }}
+    app: {{ .Values.garantiaDigital.namespace }}
   ports:
     - protocol: TCP
       port: {{ .Values.garantiaDigital.service.port }}

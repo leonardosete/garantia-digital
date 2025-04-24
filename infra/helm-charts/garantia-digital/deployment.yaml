@@ -9,16 +9,15 @@ spec:
   replicas: {{ .Values.garantiaDigital.replicaCount }}
   selector:
     matchLabels:
-      app:: {{ .Values.garantiaDigital.name }}
+      app: {{ .Values.garantiaDigital.name }}
   template:
     metadata:
       labels:
-        app:: {{ .Values.garantiaDigital.name }}
+        app: {{ .Values.garantiaDigital.name }}
     spec:
       containers:
-        - name: garantia
-          image: "{{ .Values.garantiaDigital.image.repository }}:{{ .Values.garantiaDigital.image.tag }}"
+        - name: {{ .Values.garantiaDigital.name }}
+          image: {{ .Values.garantiaDigital.image.repository }}:{{ .Values.garantiaDigital.image.tag }}
           imagePullPolicy: {{ .Values.garantiaDigital.image.pullPolicy }}
           ports:
-            -  containerPort: {{ .Values.garantiaDigital.service.targetPort }}
-
+            - containerPort: {{ .Values.garantiaDigital.service.port }}
