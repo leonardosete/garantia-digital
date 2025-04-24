@@ -10,28 +10,28 @@ on:
   workflow_dispatch:
 
 jobs:
-  check-changes:
-    name: 🔍 Verifica se build é necessário
-    runs-on: ubuntu-latest
-    outputs:
-      should_build: ${{ steps.check.outputs.changed }}
-    steps:
-      - name: 📦 Checkout do código
-        uses: actions/checkout@v4
+  # check-changes:
+  #   name: 🔍 Verifica se build é necessário
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     should_build: ${{ steps.check.outputs.changed }}
+  #   steps:
+  #     - name: 📦 Checkout do código
+  #       uses: actions/checkout@v4
 
-      - name: 🧠 Verifica se Dockerfile ou src/ foram alterados
-        id: check
-        run: |
-          echo "changed=false" >> $GITHUB_OUTPUT
-          git fetch origin mvp
-          if git diff --name-only origin/mvp HEAD | grep -E '^src/Dockerfile|^src/'; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
+  #     - name: 🧠 Verifica se Dockerfile ou src/ foram alterados
+  #       id: check
+  #       run: |
+  #         echo "changed=false" >> $GITHUB_OUTPUT
+  #         git fetch origin mvp
+  #         if git diff --name-only origin/mvp HEAD | grep -E '^src/Dockerfile|^src/'; then
+  #           echo "changed=true" >> $GITHUB_OUTPUT
+  #         fi
 
   build-and-push:
     name: 🛠️ Build & Push Docker Image
-    needs: check-changes
-    if: needs.check-changes.outputs.should_build == 'true'
+    # needs: check-changes
+    # if: needs.check-changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ steps.meta.outputs.version }}
