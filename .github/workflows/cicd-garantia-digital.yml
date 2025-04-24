@@ -44,7 +44,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: docker.io/sevenleo/github-dashboard
+          images: docker.io/sevenleo/garantia-digital
           tags: |
             type=sha,format=short
             type=ref,event=branch
