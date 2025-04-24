@@ -4,7 +4,7 @@ on:
   push:
     branches: [mvp]
     paths:
-      - 'src/**'
+      - 'app/**'
       - 'infra/**'
       - '.github/workflows/**'
   workflow_dispatch:
@@ -19,12 +19,12 @@ jobs:
   #     - name: 📦 Checkout do código
   #       uses: actions/checkout@v4
 
-  #     - name: 🧠 Verifica se Dockerfile ou src/ foram alterados
+  #     - name: 🧠 Verifica se Dockerfile ou app/ foram alterados
   #       id: check
   #       run: |
   #         echo "changed=false" >> $GITHUB_OUTPUT
   #         git fetch origin mvp
-  #         if git diff --name-only origin/mvp HEAD | grep -E '^src/Dockerfile|^src/'; then
+  #         if git diff --name-only origin/mvp HEAD | grep -E '^app/Dockerfile|^app/'; then
   #           echo "changed=true" >> $GITHUB_OUTPUT
   #         fi
 

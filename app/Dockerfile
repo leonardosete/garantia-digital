@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # expõe a porta do Uvicorn
-EXPOSE 8000
+EXPOSE 7000
 
 # comando default
-CMD ["uvicorn", "service:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "service:app", "--host", "0.0.0.0", "--port", "7000"]

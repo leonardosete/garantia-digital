@@ -13,8 +13,8 @@ garantiaDigital:
     pullPolicy: IfNotPresent
 
   service:
-    port: 8000
-    targetPort: 8000
+    port: 7000
+    targetPort: 7000
 
   ingress:
     enabled: true
