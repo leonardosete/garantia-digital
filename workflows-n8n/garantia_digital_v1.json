@@ -1,0 +1,846 @@
+{
+  "name": "garantia-digital",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "messages-upsert",
+        "options": {}
+      },
+      "id": "05ab04c3-43c8-40dc-8ee5-3560002ec9cd",
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -780,
+        420
+      ],
+      "webhookId": "e442a127-9c26-4c1c-8286-0e02aaa3afb7"
+    },
+    {
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "remoteJid",
+              "stringValue": "={{ $json.body.data.key.remoteJid }}"
+            },
+            {
+              "name": "instance",
+              "stringValue": "={{ $json.body.instance }}"
+            },
+            {
+              "name": "text",
+              "stringValue": "={{ $json.body.data.message.conversation }}"
+            },
+            {
+              "name": "pushName",
+              "stringValue": "={{ $json.body.data.pushName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "df4ec181-a745-4633-950a-894a15f60259",
+      "name": "Dados",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        -460,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://garantia-service.devops-master.shop/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "pedido",
+              "value": "={{ $json.body.data.message.conversation }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2637b288-b7b5-417e-970c-f2238030835e",
+      "name": "Chama serviço de garantia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        320,
+        680
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "operation": "send-document",
+        "instanceName": "={{ $('Chama serviço de garantia').item.json.body.instance }}",
+        "remoteJid": "={{ $('Chama serviço de garantia').item.json.body.data.key.remoteJid.split('@')[0] }}",
+        "media": "={{ $json.base64 }}",
+        "caption": "*Garantia gerada com sucesso!*",
+        "fileName": "=Garantia_{{ $('Dados').item.json.body.data.pushName }}_{{ $('Chama serviço de garantia').item.json.body.data.message.conversation }}.pdf",
+        "options_message": {}
+      },
+      "id": "e6d641f3-1688-400a-bd47-8b0b325f04c4",
+      "name": "Envia PDF no WhatsApp",
+      "type": "CUSTOM.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        760,
+        680
+      ],
+      "credentials": {
+        "evolutionApi": {
+          "id": "LpmEAEpOOUjEeAJw",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "destinationKey": "base64",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        540,
+        680
+      ],
+      "id": "fce568d6-e3ba-4087-a84d-d46e6f28c03e",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=Você é um assistente virtual educado e simpático especializado em Termos de Garantia Digital para produtos.\n\nAo receber a primeira mensagem de um novo cliente:\n- Cumprimente o usuário pelo nome (use {{ $json.body.data.pushName }}, se disponível).\n- Envie a seguinte mensagem de boas-vindas:\n\nOlá 👋 {{ $json.body.data.pushName || 'cliente' }}!\nSeja bem-vindo(a) ao nosso atendimento de **Termo de Garantia Digital**! 📜✨\n\nEscolha uma opção para começarmos:\n\n➔ *1* - Gerar Termo de Garantia\n➔ *2* - Dúvidas\n\nPor favor, envie apenas o número da opção desejada.\n\nSe o usuário responder:\n- \"1\": Responda com:\n**Perfeito!** 🎯\nPor favor, informe o número do seu pedido no formato *FS00099*.\n\n- \"2\": Responda com:\n**Claro {{ $json.body.data.pushName }}!**\nEm que posso te ajudar hoje?\n(Lembre-se: responda apenas dúvidas sobre termos de garantia ou suporte).\n\nSe a dúvida ou mensagem não estiver relacionada a Termos de Garantia:\n- Oriente o usuário de forma simpática a aguardar o atendimento humano.\n\nSempre mantenha as respostas breves, amigáveis e educadas."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        940,
+        -100
+      ],
+      "id": "284604a9-f964-47a8-81bf-fdf418747fee",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        880,
+        100
+      ],
+      "id": "8877a0e1-6d77-4746-9aac-2f98cb98e80b",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "GJNcWNw38ov5qJGS",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.body.data.key.remoteJid }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1020,
+        140
+      ],
+      "id": "e234728d-1b43-4e4c-952e-d931ee29296e",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "description": "Pense cuidadosamente se a mensagem do usuário está relacionada a garantias, suporte ou atendimento.\n\nSe estiver, responda educadamente com as informações relevantes.\n\nSe não estiver relacionado, oriente o usuário a aguardar atendimento humano.\n\nResuma seu raciocínio internamente antes de gerar a resposta final.\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        100
+      ],
+      "id": "c72e9597-9798-43c6-9fef-8d684e09cebc",
+      "name": "Think"
+    },
+    {
+      "parameters": {
+        "content": "## Pré-Atendimento WhatsApp",
+        "height": 680,
+        "width": 1800,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -180,
+        -160
+      ],
+      "id": "a6e7ef5b-fda8-4d48-a2a2-59c2ed75514e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eb8af774-e409-4580-8e83-229c6f5d7a4d",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "FS00",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        100,
+        680
+      ],
+      "id": "90229edc-85c4-4d79-888b-42cac618500e",
+      "name": "Informando pedido"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0b17562d-51eb-4cc3-ae0a-d55c1e97077b",
+              "leftValue": "={{ $('WhatsApp Webhook').item.json.body.data.key.remoteJid }}",
+              "rightValue": "=5511952520474@s.whatsapp.net",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -120,
+        180
+      ],
+      "id": "39f45498-f091-4ae5-a60d-107e5fd0ef1d",
+      "name": "Allowed People",
+      "notesInFlow": true,
+      "alwaysOutputData": false,
+      "notes": "Only runs the workflow for the allowed people."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0b17562d-51eb-4cc3-ae0a-d55c1e97077b",
+              "leftValue": "={{ $('WhatsApp Webhook').item.json.body.data.key.remoteJid }}",
+              "rightValue": "=5511952520474@s.whatsapp.net",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -120,
+        680
+      ],
+      "id": "33e7969e-5ee8-4d21-b0cc-ccf234f4b127",
+      "name": "Allowed People1",
+      "notesInFlow": true,
+      "alwaysOutputData": false,
+      "notes": "Only runs the workflow for the allowed people."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d145f4dc-c991-4e22-b65b-4a624ce7615e",
+              "leftValue": "={{ $json.body.data.message.conversation }}",
+              "rightValue": "(off)",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        60,
+        40
+      ],
+      "id": "a0ce24c5-8069-4e79-a556-1b5d9e11bff8",
+      "name": "Agent-OFF",
+      "notesInFlow": true,
+      "alwaysOutputData": false,
+      "notes": "The workflow does not execute.\nIf the webhook's message content has \"(agent-off)\"."
+    },
+    {
+      "parameters": {
+        "content": "## Gerar Termo e enviar via WhatsApp ao cliente",
+        "height": 320,
+        "width": 1180,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -180,
+        580
+      ],
+      "id": "9e6cd7de-485a-4262-96df-6be9ff21ee2c",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.text }}",
+                    "rightValue": "1",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "79665203-6a13-4478-9bac-bced72fb7b56"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "1-Gerar Garantia"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.text }}",
+                    "rightValue": "2",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "3ada36f7-51e3-4bcb-b731-2f5cac1c3a31"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "2-Duvidas"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e818511d-4b0d-4726-870a-d40ee431f98c",
+                    "leftValue": "={{ $json.aiMode }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "AI Mode"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.text }}",
+                    "rightValue": "^(?!1$|2$|FS00)",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    },
+                    "id": "807639d1-5967-4f02-b7f5-bf72f61a58ca"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Boas Vindas"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        460,
+        40
+      ],
+      "id": "782b2867-372c-4de1-9562-9c4c22a18920",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "={{ $('Switch1').item.json.body.instance }}",
+        "remoteJid": "={{ $('Switch1').item.json.body.data.key.remoteJid }}",
+        "messageText": "={{ $json.output }}",
+        "options_message": {}
+      },
+      "name": "Send Agent Response",
+      "type": "CUSTOM.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        -100
+      ],
+      "id": "222ca231-b6bf-429f-9ed7-96d139562470",
+      "alwaysOutputData": true,
+      "credentials": {
+        "evolutionApi": {
+          "id": "LpmEAEpOOUjEeAJw",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1) pega o static data do node\nconst staticData = $getWorkflowStaticData('node');\nstaticData.aiModes = staticData.aiModes || {};\n\n// 2) como você está em \"Run Once for All Items\", itera por todos\nconst newItems = [];\nfor (const item of items) {\n  const { remoteJid, text } = item.json;\n  const trimmed = (text || '').trim();\n\n  // se escolheu \"1\", desabilita o modo AI\n  if (trimmed === '1') staticData.aiModes[remoteJid] = false;\n  \n  // se escolheu \"2\", habilita o modo AI\n  if (trimmed === '2') {\n    staticData.aiModes[remoteJid] = true;\n  }\n  // se mandou pedido, reseta para geração de garantia\n  if (/^FS00/.test(trimmed)) {\n    staticData.aiModes[remoteJid] = false;\n  }\n\n  // devolve cada item com a flag injetada\n  newItems.push({\n    json: {\n      ...item.json,\n      aiMode: staticData.aiModes[remoteJid] || false,\n    },\n  });\n}\n\nreturn newItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "id": "bf2b3992-5e53-48a6-a410-a62a0ed3b9ca",
+      "name": "Code",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "sseEndpoint": "https://n8n.devops-master.shop/mcp/mcp_server_sheets/sse"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        120
+      ],
+      "id": "947c8fd1-9019-47d2-8f2e-09e8c275e39d",
+      "name": "MCP Client"
+    },
+    {
+      "parameters": {
+        "path": "mcp_server_sheets"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        680
+      ],
+      "id": "6eb98e81-e757-4586-af99-f51dbad3e56c",
+      "name": "MCP Server Trigger",
+      "webhookId": "360f4cae-e5e8-474e-8df7-706b3ca3f809"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Sdp3IUc-pOoFhuHgWhNnqqwFoaJbHxreYQHg_ySt6FQ",
+          "mode": "list",
+          "cachedResultName": "dados-garantia",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Sdp3IUc-pOoFhuHgWhNnqqwFoaJbHxreYQHg_ySt6FQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 61454016,
+          "mode": "list",
+          "cachedResultName": "garantia-enviar",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Sdp3IUc-pOoFhuHgWhNnqqwFoaJbHxreYQHg_ySt6FQ/edit#gid=61454016"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        1660,
+        880
+      ],
+      "id": "682d39e5-7e5b-4fea-aaf2-325bf96dca61",
+      "name": "Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "h6kQe2fQqe8erwE6",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "WhatsApp Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.devops-master.shop",
+            "x-request-id": "d6a85c1e70ca3d6815c2d27972678b98",
+            "x-real-ip": "172.18.0.1",
+            "x-forwarded-for": "172.18.0.1",
+            "x-forwarded-host": "n8n.devops-master.shop",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-scheme": "https",
+            "x-scheme": "https",
+            "content-length": "628",
+            "content-type": "application/json",
+            "user-agent": "axios/1.7.7",
+            "accept-encoding": "gzip, compress, deflate, br"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "messages.upsert",
+            "instance": "leosetecel",
+            "data": {
+              "key": {
+                "remoteJid": "5511952520474@s.whatsapp.net",
+                "fromMe": true,
+                "id": "3AB5540FD1BEE3E4A5A6"
+              },
+              "pushName": "Leonardo Sete",
+              "status": "SERVER_ACK",
+              "message": {
+                "conversation": "FS00015"
+              },
+              "messageType": "conversation",
+              "messageTimestamp": 1745987599,
+              "instanceId": "662b0bde-007f-4ef6-8994-6ccf70088cd2",
+              "source": "ios"
+            },
+            "destination": "https://n8n.devops-master.shop/webhook/messages-upsert",
+            "date_time": "2025-04-30T01:33:19.251Z",
+            "sender": "5511952520474@s.whatsapp.net",
+            "server_url": "https://evolution-api.devops-master.shop",
+            "apikey": "ED4029F7DD85-47FC-BD78-82081C054864"
+          },
+          "webhookUrl": "https://n8n.devops-master.shop/webhook/messages-upsert",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [
+        [
+          {
+            "node": "Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dados": {
+      "main": [
+        [
+          {
+            "node": "Allowed People",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Allowed People1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chama serviço de garantia": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Envia PDF no WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send Agent Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Informando pedido": {
+      "main": [
+        [
+          {
+            "node": "Chama serviço de garantia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allowed People": {
+      "main": [
+        [
+          {
+            "node": "Agent-OFF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allowed People1": {
+      "main": [
+        [
+          {
+            "node": "Informando pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent-OFF": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "88531a73-11ae-47cb-9cd4-797bf858e8d4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "df53e0df22ca575909b7fcbadc89be0e731d0f44a490889dd16255ff4f1149ff"
+  },
+  "id": "sASjsnZxJ8sHZQx5",
+  "tags": []
+}
